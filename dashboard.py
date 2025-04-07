@@ -63,8 +63,7 @@ def generate_signal(df):
 # === ML Labeling ===
 def add_target_label(df, lookahead=1):
     df = df.copy()
-    df["future_price"] = df["price"].shift(-lookahead)
-    df["target"] = np.where(df["future_price"] > df["price"], 1, 0)
+    df["target"] = df["price"].shift(-1)
     return df.dropna()
 
 def train_model(df):
