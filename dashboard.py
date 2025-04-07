@@ -1,6 +1,7 @@
  import streamlit as st
  from streamlit_autorefresh import st_autorefresh
- from pycoingecko import CoinGeckoAPI
+ from binance.client import Client
+ from binance.enums import KLINE_INTERVAL_1MINUTE, KLINE_INTERVAL_1HOUR, KLINE_INTERVAL_1DAY
  import pandas as pd
  import numpy as np
  import ta
@@ -8,31 +9,38 @@
  from sklearn.model_selection import train_test_split
  
  # === Settings ===
- cg = CoinGeckoAPI()
- 
  st.sidebar.title("🔧 Settings")
- coins = {
-     "Bitcoin (BTC)": "bitcoin",
-     "Ethereum (ETH)": "ethereum",
-     "Solana (SOL)": "solana"
- }
- coin_name = st.sidebar.selectbox("Crypto Asset", list(coins.keys()))
- coin_id = coins[coin_name]
- 
- days = st.sidebar.selectbox("Lookback Period", ["1", "7", "14", "30", "90", "180", "365"], index=3)
- short_ma = st.sidebar.slider("Short MA", 2, 50, 10)
- long_ma = st.sidebar.slider("Long MA", 5, 100, 30)
- refresh_rate = st.sidebar.slider("Auto-Refresh Every (seconds)", 10, 300, 60)
- 
- # Auto-refresh
- st_autorefresh(interval=refresh_rate * 1000, key="refresh")
- 
- # === Data Fetching ===
- def fetch_data(coin_id, days):
-     data = cg.get_coin_market_chart_by_id(id=coin_id, vs_currency='usd', days=days)
-     df = pd.DataFrame(data["prices"], columns=["timestamp", "price"])
-     df["time"] = pd.to_datetime(df["timestamp"], unit="ms")
-     return df[["time", "price"]]
+symbols = {
+    "Bitcoin (BTC)": "BTCUSDT",
+    "Ethereum (ETH)": "ETHUSDT",
+    "Solana (SOL)": "SOLUSDT"
+}
+symbol_name = st.sidebar.selectbox("Crypto Asset", list(symbols.keys()))
+symbol = symbols[symbol_name]
+
+interval = st.sidebar.selectbox("Interval", ["1m", "1h", "1d"], index=1)
+interval_map = {"1m": KLINE_INTERVAL_1MINUTE, "1h": KLINE_INTERVAL_1HOUR, "1d": KLINE_INTERVAL_1DAY}
+binance_interval = interval_map[interval]
+
+limit = st.sidebar.slider("Data Points (candles)", 100, 1000, 500)
+short_ma = st.sidebar.slider("Short MA", 2, 50, 10)
+long_ma = st.sidebar.slider("Long MA", 5, 100, 30)
+refresh_rate = st.sidebar.slider("Auto-Refresh Every (seconds)", 10, 300, 60)
+
+# Auto-refresh
+st_autorefresh(interval=refresh_rate * 1000, key="refresh")
+
+# === Data Fetching from Binance ===
+def fetch_data(symbol, interval, limit):
+    klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
+    df = pd.DataFrame(klines, columns=[
+        "open_time", "open", "high", "low", "close", "volume",
+        "close_time", "quote_asset_volume", "number_of_trades",
+        "taker_buy_base_vol", "taker_buy_quote_vol", "ignore"
+    ])
+    df["time"] = pd.to_datetime(df["close_time"], unit="ms")
+    df["price"] = df["close"].astype(float)
+    return df[["time", "price"]]
  
  # === Add Technical Indicators ===
  def add_indicators(df):
