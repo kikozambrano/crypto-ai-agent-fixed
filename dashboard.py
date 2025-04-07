@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import numpy as np
-import pandas_ta as ta
+import ta
 from pycoingecko import CoinGeckoAPI
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -41,18 +41,53 @@ def fetch_data(coin_id="bitcoin", days="365"):
 # === Add Technical Indicators ===
 def add_indicators(df):
     df = df.copy()
-    df["short_ma"] = df["price"].rolling(window=short_ma).mean()
-    df["long_ma"] = df["price"].rolling(window=long_ma).mean()
-    df["rsi"] = ta.momentum.RSIIndicator(df["price"]).rsi()
-    df["ema_20"] = ta.trend.EMAIndicator(df["price"], window=20).ema_indicator()
-    df["macd_diff"] = ta.trend.MACD(df["price"]).macd_diff()
     try:
-        df["stoch_rsi"] = ta.momentum.StochRSIIndicator(df["price"]).stochrsi()
-    except:
+        df["short_ma"] = df["price"].rolling(window=short_ma).mean()
+    except Exception as e:
+        df["short_ma"] = np.nan
+        st.warning(f"⚠️ Failed to calculate Short MA: {e}")
+
+    try:
+        df["long_ma"] = df["price"].rolling(window=long_ma).mean()
+    except Exception as e:
+        df["long_ma"] = np.nan
+        st.warning(f"⚠️ Failed to calculate Long MA: {e}")
+
+    try:
+        df["rsi"] = ta.rsi(df["price"])
+    except Exception as e:
+        df["rsi"] = np.nan
+        st.warning(f"⚠️ Failed to calculate RSI: {e}")
+
+    try:
+        df["ema_20"] = ta.ema(df["price"], length=20)
+    except Exception as e:
+        df["ema_20"] = np.nan
+        st.warning(f"⚠️ Failed to calculate EMA: {e}")
+
+    try:
+        macd = ta.macd(df["price"])
+        df["macd_diff"] = macd["MACD_12_26_9"] - macd["MACDs_12_26_9"]
+    except Exception as e:
+        df["macd_diff"] = np.nan
+        st.warning(f"⚠️ Failed to calculate MACD: {e}")
+
+    try:
+        stochrsi = ta.stochrsi(df["price"])
+        df["stoch_rsi"] = stochrsi["STOCHRSIk_14_14_3_3"] if "STOCHRSIk_14_14_3_3" in stochrsi else np.nan
+    except Exception as e:
         df["stoch_rsi"] = np.nan
-    bb = ta.volatility.BollingerBands(df["price"])
-    df["bb_upper"] = bb.bollinger_hband()
-    df["bb_lower"] = bb.bollinger_lband()
+        st.warning(f"⚠️ Failed to calculate Stochastic RSI: {e}")
+
+    try:
+        bb = ta.bbands(df["price"])
+        df["bb_upper"] = bb["BBU_20_2.0"]
+        df["bb_lower"] = bb["BBL_20_2.0"]
+    except Exception as e:
+        df["bb_upper"] = np.nan
+        df["bb_lower"] = np.nan
+        st.warning(f"⚠️ Failed to calculate Bollinger Bands: {e}")
+
     return df
 
 # === Signal Logic ===
@@ -73,8 +108,6 @@ def add_target_label(df, lookahead=1):
 def train_model(df):
     features = ["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]
     df = df.dropna(subset=features + ["target"])
-    if df.empty:
-        return None
     if df.empty:
         return None
     X = df[features]
@@ -140,16 +173,8 @@ if df["rsi"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["rsi"]])
 else:
     st.warning("⚠️ RSI not available.")
-if df["rsi"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["rsi"]])
-else:
-    st.warning("⚠️ RSI not available.")
 
 st.subheader("📉 MACD")
-if df["macd_diff"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["macd_diff"]])
-else:
-    st.warning("⚠️ MACD not available.")
 if df["macd_diff"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["macd_diff"]])
 else:
@@ -160,16 +185,8 @@ if df[["bb_upper", "bb_lower"]].notna().sum().sum() > 0:
     st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 else:
     st.warning("⚠️ Bollinger Bands not available.")
-if df[["bb_upper", "bb_lower"]].notna().sum().sum() > 0:
-    st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
-else:
-    st.warning("⚠️ Bollinger Bands not available.")
 
 st.subheader("🌀 Stochastic RSI")
-if df["stoch_rsi"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["stoch_rsi"]])
-else:
-    st.warning("⚠️ Stochastic RSI not available.")
 if df["stoch_rsi"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["stoch_rsi"]])
 else:
@@ -180,3 +197,60 @@ if df["ema_20"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["price", "ema_20"]])
 else:
     st.warning("⚠️ EMA not available.")
+
+# === Backtesting ===
+if st.sidebar.checkbox("Run Backtest"):
+    st.subheader("📈 Backtest Results")
+
+    backtest_df = df.dropna().copy()
+    backtest_df = add_target_label(backtest_df)
+    backtest_df = backtest_df.dropna(subset=["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi", "target"])
+
+    features = ["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]
+    if backtest_df[features].empty:
+        st.warning("⚠️ Not enough indicator data to run backtest.")
+    else:
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(backtest_df[features], backtest_df["target"])
+
+        initial_cash = 10000
+        cash = initial_cash
+        position = 0
+        portfolio_values = []
+        trade_log = []
+
+        for i in range(len(backtest_df) - 1):
+            row = backtest_df.iloc[i]
+            next_price = backtest_df.iloc[i + 1]["price"]
+            input_row = pd.DataFrame([row[features]])
+            pred = model.predict(input_row)[0]
+
+            if pred > row["price"] and position == 0:
+                # BUY
+                position = cash / row["price"]
+                cash = 0
+                trade_log.append({"date": row["time"], "action": "BUY", "price": row["price"]})
+            elif pred < row["price"] and position > 0:
+                # SELL
+                cash = position * row["price"]
+                position = 0
+                trade_log.append({"date": row["time"], "action": "SELL", "price": row["price"]})
+
+            portfolio_value = cash + position * row["price"]
+            portfolio_values.append(portfolio_value)
+
+        final_value = cash + position * backtest_df.iloc[-1]["price"]
+        total_return = ((final_value - initial_cash) / initial_cash) * 100
+
+        st.metric("💰 Final Portfolio Value", f"${final_value:,.2f}")
+        st.metric("📈 Total Return", f"{total_return:.2f}%")
+
+        chart_df = backtest_df.iloc[:len(portfolio_values)].copy()
+        chart_df["Portfolio Value"] = portfolio_values
+        st.line_chart(chart_df.set_index("time")[["price", "Portfolio Value"]])
+
+        st.subheader("📋 Trade Log")
+        if trade_log:
+            st.dataframe(pd.DataFrame(trade_log))
+        else:
+            st.write("No trades executed.")
