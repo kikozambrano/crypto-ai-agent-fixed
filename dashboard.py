@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import ta
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
 # === Settings ===
@@ -125,6 +124,7 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
 
+
 # === Backtesting ===
 if st.sidebar.checkbox("Run Backtest"):
     st.subheader("📈 Backtest Results")
@@ -150,13 +150,14 @@ if st.sidebar.checkbox("Run Backtest"):
         next_price = backtest_df.iloc[i + 1]["price"]
         input_row = pd.DataFrame([row[["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]])
         pred = model.predict(input_row)[0]
+        st.write(f"{row['time']} | Price: {row['price']:.2f} | Predicted: {pred:.2f}")
 
-        if pred > row["price"] and position == 0:
+        if (pred - row["price"]) / row["price"] > 0.005 and position == 0:
             # BUY
             position = cash / row["price"]
             cash = 0
             trade_log.append({"date": row["time"], "action": "BUY", "price": row["price"]})
-        elif pred < row["price"] and position > 0:
+        elif (row["price"] - pred) / row["price"] > 0.005 and position > 0:
             # SELL
             cash = position * row["price"]
             position = 0
