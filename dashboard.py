@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import numpy as np
-import ta
+import pandas_ta as ta
 from pycoingecko import CoinGeckoAPI
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -54,33 +54,36 @@ def add_indicators(df):
         st.warning(f"⚠️ Failed to calculate Long MA: {e}")
 
     try:
-        df["rsi"] = ta.rsi(df["price"])
+        df["rsi"] = df["price"].ta.rsi()
     except Exception as e:
         df["rsi"] = np.nan
         st.warning(f"⚠️ Failed to calculate RSI: {e}")
 
     try:
-        df["ema_20"] = ta.ema(df["price"], length=20)
+        df["ema_20"] = df["price"].ta.ema(length=20)
     except Exception as e:
         df["ema_20"] = np.nan
         st.warning(f"⚠️ Failed to calculate EMA: {e}")
 
     try:
-        macd = ta.macd(df["price"])
-        df["macd_diff"] = macd["MACD_12_26_9"] - macd["MACDs_12_26_9"]
+        macd = df["price"].ta.macd()
+        if "MACD_12_26_9" in macd and "MACDs_12_26_9" in macd:
+            df["macd_diff"] = macd["MACD_12_26_9"] - macd["MACDs_12_26_9"]
+        else:
+            df["macd_diff"] = np.nan
     except Exception as e:
         df["macd_diff"] = np.nan
         st.warning(f"⚠️ Failed to calculate MACD: {e}")
 
     try:
-        stochrsi = ta.stochrsi(df["price"])
-        df["stoch_rsi"] = stochrsi["STOCHRSIk_14_14_3_3"] if "STOCHRSIk_14_14_3_3" in stochrsi else np.nan
+        stochrsi = df["price"].ta.stochrsi()
+        df["stoch_rsi"] = stochrsi["STOCHRSIk_14_14_3_3"] if "STOCHRSIk_14_14_3_3" in stochrsi.columns else np.nan
     except Exception as e:
         df["stoch_rsi"] = np.nan
         st.warning(f"⚠️ Failed to calculate Stochastic RSI: {e}")
 
     try:
-        bb = ta.bbands(df["price"])
+        bb = df["price"].ta.bbands()
         df["bb_upper"] = bb["BBU_20_2.0"]
         df["bb_lower"] = bb["BBL_20_2.0"]
     except Exception as e:
@@ -114,7 +117,11 @@ def train_model(df):
     y = df["target"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
     model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
+    try:
+        model.fit(X_train, y_train)
+    except Exception as e:
+        st.error(f"Model training failed: {e}")
+        return None
     return model
 
 # === Main App ===
