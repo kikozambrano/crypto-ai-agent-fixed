@@ -122,6 +122,7 @@ if not np.isnan(predicted_price):
 if not np.isnan(expected_return):
     st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
+
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
 
@@ -129,30 +130,28 @@ st.subheader("📈 RSI")
 if df["rsi"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["rsi"]])
 else:
-    st.warning("RSI not available.")
+    st.warning("⚠️ RSI not available.")
 
 st.subheader("📉 MACD")
 if df["macd_diff"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["macd_diff"]])
 else:
-    st.warning("⚠️ MACD not available for this time range.")
+    st.warning("⚠️ MACD not available.")
 
 st.subheader("🎯 Bollinger Bands")
 if df[["bb_upper", "bb_lower"]].notna().sum().sum() > 0:
     st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 else:
-    st.warning("⚠️ Bollinger Bands not available for this time range.")
+    st.warning("⚠️ Bollinger Bands not available.")
 
 st.subheader("🌀 Stochastic RSI")
 if df["stoch_rsi"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["stoch_rsi"]])
 else:
-    st.warning("⚠️ Stochastic RSI not available for this time range.")
+    st.warning("⚠️ Stochastic RSI not available.")
 
 st.subheader("⚡ EMA (20)")
 if df["ema_20"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["price", "ema_20"]])
 else:
-    st.warning("⚠️ EMA not available for this time range.")
-
-
+    st.warning("⚠️ EMA not available.")
