@@ -3,4 +3,5 @@ pandas
 numpy
 python-binance
 streamlit_autorefresh
+scikit-learn
 ta
