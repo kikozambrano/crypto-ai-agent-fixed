@@ -3,3 +3,4 @@ pandas
 numpy
 pycoingecko
 streamlit_autorefresh
+ta
