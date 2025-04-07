@@ -63,7 +63,7 @@ def generate_signal(df):
 # === ML Labeling ===
 def add_target_label(df, lookahead=1):
     df = df.copy()
-    df["target"] = df["price"].shift(-lookahead)
+    df["target"] = df["price"].shift(-1)
     return df.dropna()
 
 def train_model(df):
@@ -92,7 +92,8 @@ if len(df) >= 50:
         latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
         latest = latest.dropna()
         if not latest.empty:
-            predicted_price = model.predict(latest)[0]
+            ml_prediction = model.predict(latest)[0]
+            predicted_price = ml_prediction
             latest_price = df["price"].iloc[-1]
             price_diff = predicted_price - latest_price
             expected_return = (price_diff / latest_price) * 100
@@ -104,7 +105,7 @@ if len(df) >= 50:
             else:
                 ml_signal = "HOLD"
 
-            st.write("📊 ML raw prediction:", f"${predicted_price:,.2f}")
+            st.write("📊 ML raw prediction:", f"${ml_prediction:,.2f}")
             st.write("📊 ML final signal:", ml_signal)
         else:
             st.warning("ML input row has NaN values. Cannot predict.")
@@ -113,7 +114,7 @@ if len(df) >= 50:
 else:
     st.warning("Not enough data to train ML model. Use a longer lookback period.")
 
-# === Streamlit UI with chart checks ===
+# === Streamlit UI ===
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
@@ -122,36 +123,20 @@ if not np.isnan(predicted_price):
 if not np.isnan(expected_return):
     st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
-
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
 
 st.subheader("📈 RSI")
-if df["rsi"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["rsi"]])
-else:
-    st.warning("⚠️ RSI not available.")
+st.line_chart(df.set_index("time")[["rsi"]])
 
 st.subheader("📉 MACD")
-if df["macd_diff"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["macd_diff"]])
-else:
-    st.warning("⚠️ MACD not available.")
+st.line_chart(df.set_index("time")[["macd_diff"]])
 
 st.subheader("🎯 Bollinger Bands")
-if df[["bb_upper", "bb_lower"]].notna().sum().sum() > 0:
-    st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
-else:
-    st.warning("⚠️ Bollinger Bands not available.")
+st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 
 st.subheader("🌀 Stochastic RSI")
-if df["stoch_rsi"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["stoch_rsi"]])
-else:
-    st.warning("⚠️ Stochastic RSI not available.")
+st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
-if df["ema_20"].notna().sum() > 0:
-    st.line_chart(df.set_index("time")[["price", "ema_20"]])
-else:
-    st.warning("⚠️ EMA not available.")
+st.line_chart(df.set_index("time")[["price", "ema_20"]])
