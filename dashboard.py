@@ -43,7 +43,9 @@ def add_indicators(df):
     df["ema_20"] = ta.trend.EMAIndicator(df["price"], window=20).ema_indicator()
     df["macd_diff"] = ta.trend.MACD(df["price"]).macd_diff()
     try:
-        df["stoch_rsi"] = ta.momentum.StochRSIIndicator(df["price"]).stochrsi()
+        stoch_rsi_indicator = ta.momentum.StochRSIIndicator(close=df["price"])
+    df["stoch_rsi"] = stoch_rsi_indicator.stochrsi()
+    df["stoch_rsi_pct"] = df["stoch_rsi"] * 100
     except:
         df["stoch_rsi"] = np.nan
     bb = ta.volatility.BollingerBands(df["price"])
@@ -118,8 +120,13 @@ st.line_chart(df.set_index("time")[["macd_diff"]])
 st.subheader("🎯 Bollinger Bands")
 st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 
-st.subheader("🌀 Stochastic RSI")
-st.line_chart(df.set_index("time")[["stoch_rsi"]])
+if st.sidebar.checkbox("Show Stochastic RSI Chart", value=True):
+    st.subheader("🌀 Stochastic RSI (0 to 1)")
+    st.line_chart(df.set_index("time")[["stoch_rsi"]])
+    st.subheader("🌀 Stochastic RSI (%)")
+    st.line_chart(df.set_index("time")[["stoch_rsi_pct"]])
+    st.write("🔍 Last 10 Stoch RSI values:")
+    st.dataframe(df[["time", "stoch_rsi", "stoch_rsi_pct"]].tail(10))
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
