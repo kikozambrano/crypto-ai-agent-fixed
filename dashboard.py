@@ -84,20 +84,22 @@ signal = generate_signal(df)
 
 ml_signal = "N/A"
 if len(df) >= 50:
- try:
-    df = add_target_label(df)
-    model = train_model(df)
-    latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
-    latest = latest.dropna()
-    if not latest.empty:
-        ml_prediction = model.predict(latest)[0]
-        ml_signal = "BUY" if ml_prediction == 1 else "SELL"
-        st.write("📊 ML raw prediction:", ml_prediction)
-        st.write("📊 ML final signal:", ml_signal)
-    else:
-        st.warning("ML input row has NaN values. Cannot predict.")
-except Exception as e:
-    st.error(f"ML prediction failed: {e}")
+    try:
+        df = add_target_label(df)
+        model = train_model(df)
+        latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
+        latest = latest.dropna()
+        if not latest.empty:
+            ml_prediction = model.predict(latest)[0]
+            ml_signal = "BUY" if ml_prediction == 1 else "SELL"
+            st.write("📊 ML raw prediction:", ml_prediction)
+            st.write("📊 ML final signal:", ml_signal)
+        else:
+            st.warning("ML input row has NaN values. Cannot predict.")
+    except Exception as e:
+        st.error(f"ML prediction failed: {e}")
+else:
+    st.warning("Not enough data to train ML model. Use a longer lookback period.")
 
 # === Streamlit UI ===
 st.title(f"📈 ML + Technical Signal for {coin_name}")
