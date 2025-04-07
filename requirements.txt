@@ -6,7 +6,13 @@ streamlit_autorefresh
 <<<<<<< HEAD
 scikit-learn
 ta
+<<<<<<< HEAD
 =======
 ta
 scikit-learn
 >>>>>>> 618fe25 (Update: Stochastic RSI improvements and debug tools)
+=======
+scikit-learn
+vaderSentiment
+requests
+>>>>>>> d6ecfb5 (Fix)
