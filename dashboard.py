@@ -63,9 +63,6 @@ def generate_signal(df):
 # === ML Labeling ===
 def add_target_label(df, lookahead=1):
     df = df.copy()
-    df["target"] = df["price"].shift(-lookahead)
-    return df.dropna()
-    df = df.copy()
     df["future_price"] = df["price"].shift(-lookahead)
     df["target"] = np.where(df["future_price"] > df["price"], 1, 0)
     return df.dropna()
@@ -86,6 +83,9 @@ df = add_indicators(df)
 signal = generate_signal(df)
 
 ml_signal = "N/A"
+predicted_price = np.nan
+expected_return = np.nan
+
 if len(df) >= 50:
     try:
         df = add_target_label(df)
@@ -94,17 +94,18 @@ if len(df) >= 50:
         latest = latest.dropna()
         if not latest.empty:
             ml_prediction = model.predict(latest)[0]
-            predicted_price = model.predict(latest)[0]
-latest_price = df["price"].iloc[-1]
-price_diff = predicted_price - latest_price
-expected_return = (price_diff / latest_price) * 100
+            predicted_price = ml_prediction
+            latest_price = df["price"].iloc[-1]
+            price_diff = predicted_price - latest_price
+            expected_return = (price_diff / latest_price) * 100
 
-if price_diff > 0:
-    ml_signal = "BUY"
-elif price_diff < 0:
-    ml_signal = "SELL"
-else:
-    ml_signal = "HOLD"
+            if price_diff > 0:
+                ml_signal = "BUY"
+            elif price_diff < 0:
+                ml_signal = "SELL"
+            else:
+                ml_signal = "HOLD"
+
             st.write("📊 ML raw prediction:", ml_prediction)
             st.write("📊 ML final signal:", ml_signal)
         else:
@@ -118,8 +119,10 @@ else:
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
-st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
-st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
+if not np.isnan(predicted_price):
+    st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
+if not np.isnan(expected_return):
+    st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
