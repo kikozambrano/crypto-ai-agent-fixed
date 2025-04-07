@@ -82,6 +82,9 @@ df = add_indicators(df)
 signal = generate_signal(df)
 
 ml_signal = "N/A"
+predicted_price = np.nan
+expected_return = np.nan
+
 if len(df) >= 50:
     try:
         df = add_target_label(df)
@@ -104,7 +107,6 @@ if len(df) >= 50:
 
             st.write("📊 ML raw prediction:", f"${ml_prediction:,.2f}")
             st.write("📊 ML final signal:", ml_signal)
-            st.write("📊 ML final signal:", ml_signal)
         else:
             st.warning("ML input row has NaN values. Cannot predict.")
     except Exception as e:
@@ -120,78 +122,3 @@ if not np.isnan(predicted_price):
     st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
 if not np.isnan(expected_return):
     st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
-
-st.subheader("📊 Price + Moving Averages")
-st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
-
-st.subheader("📈 RSI")
-st.line_chart(df.set_index("time")[["rsi"]])
-
-st.subheader("📉 MACD")
-st.line_chart(df.set_index("time")[["macd_diff"]])
-
-st.subheader("🎯 Bollinger Bands")
-st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
-
-st.subheader("🌀 Stochastic RSI")
-st.line_chart(df.set_index("time")[["stoch_rsi"]])
-
-st.subheader("⚡ EMA (20)")
-st.line_chart(df.set_index("time")[["price", "ema_20"]])
-
-
-# === Backtesting ===
-if st.sidebar.checkbox("Run Backtest"):
-    st.subheader("📈 Backtest Results")
-    
-    backtest_df = df.dropna().copy()
-    backtest_df = add_target_label(backtest_df)
-    backtest_df = backtest_df.dropna(subset=["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi", "target"])
-
-    X = backtest_df[["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
-    y = backtest_df["target"]
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
-
-    # Simulate trades
-    initial_cash = 10000
-    cash = initial_cash
-    position = 0
-    portfolio_values = []
-    trade_log = []
-
-    for i in range(len(backtest_df) - 1):
-        row = backtest_df.iloc[i]
-        next_price = backtest_df.iloc[i + 1]["price"]
-        input_row = pd.DataFrame([row[["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]])
-        pred = model.predict(input_row)[0]
-
-        if pred > row["price"] and position == 0:
-            # BUY
-            position = cash / row["price"]
-            cash = 0
-            trade_log.append({"date": row["time"], "action": "BUY", "price": row["price"]})
-        elif pred < row["price"] and position > 0:
-            # SELL
-            cash = position * row["price"]
-            position = 0
-            trade_log.append({"date": row["time"], "action": "SELL", "price": row["price"]})
-
-        portfolio_value = cash + position * row["price"]
-        portfolio_values.append(portfolio_value)
-
-    final_value = cash + position * backtest_df.iloc[-1]["price"]
-    total_return = ((final_value - initial_cash) / initial_cash) * 100
-
-    st.metric("💰 Final Portfolio Value", f"${final_value:,.2f}")
-    st.metric("📈 Total Return", f"{total_return:.2f}%")
-
-    chart_df = backtest_df.iloc[:len(portfolio_values)].copy()
-    chart_df["Portfolio Value"] = portfolio_values
-    st.line_chart(chart_df.set_index("time")[["price", "Portfolio Value"]])
-
-    st.subheader("📋 Trade Log")
-    if trade_log:
-        st.dataframe(pd.DataFrame(trade_log))
-    else:
-        st.write("No trades executed.")
