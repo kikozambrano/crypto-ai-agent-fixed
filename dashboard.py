@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import numpy as np
-import ta
+import pandas_ta as ta
 from pycoingecko import CoinGeckoAPI
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
