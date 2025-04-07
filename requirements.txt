@@ -3,5 +3,5 @@ pandas
 numpy
 pycoingecko
 streamlit_autorefresh
-ta
-scikit-learn
+pandas_ta
+scikit-learn>=1.0
