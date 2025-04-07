@@ -33,14 +33,13 @@ refresh_rate = st.sidebar.slider("Auto-Refresh Every (seconds)", 10, 300, 60)
 st_autorefresh(interval=refresh_rate * 1000, key="refresh")
 
 # === Data Fetching from Binance ===
-def fetch_data(symbol, interval, limit):
-    klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
+def fetch_data(symbol="BTCUSDT", interval="1d", lookback="30"):
+    klines = client.get_klines(symbol=symbol, interval=interval, limit=int(lookback))
     df = pd.DataFrame(klines, columns=[
-        "open_time", "open", "high", "low", "close", "volume",
-        "close_time", "quote_asset_volume", "number_of_trades",
-        "taker_buy_base_vol", "taker_buy_quote_vol", "ignore"
+        "timestamp", "open", "high", "low", "close", "volume", "close_time",
+        "quote_asset_volume", "num_trades", "taker_buy_base", "taker_buy_quote", "ignore"
     ])
-    df["time"] = pd.to_datetime(df["close_time"], unit="ms")
+    df["time"] = pd.to_datetime(df["timestamp"], unit="ms")
     df["price"] = df["close"].astype(float)
     return df[["time", "price"]]
 
@@ -87,6 +86,7 @@ def train_model(df):
     return model
 
 # === Main App ===
+
 df = fetch_data(symbol, binance_interval, limit)
 df = add_indicators(df)
 signal = generate_signal(df)
