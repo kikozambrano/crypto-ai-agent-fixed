@@ -94,10 +94,10 @@ if len(df) >= 50:
             ml_signal = "BUY" if ml_prediction == 1 else "SELL"
 
     # Friendly explanation
-    rsi_val = latest["rsi"].values[0]
-    macd_val = latest["macd_diff"].values[0]
-    sma = latest["short_ma"].values[0]
-    lma = latest["long_ma"].values[0]
+rsi_val = latest["rsi"].values[0]
+macd_val = latest["macd_diff"].values[0]
+sma = latest["short_ma"].values[0]
+lma = latest["long_ma"].values[0]
 
     explanation = []
     if rsi_val < 30:
