@@ -43,12 +43,9 @@ def add_indicators(df):
     df["ema_20"] = ta.trend.EMAIndicator(df["price"], window=20).ema_indicator()
     df["macd_diff"] = ta.trend.MACD(df["price"]).macd_diff()
     try:
-        stoch_rsi_indicator = ta.momentum.StochRSIIndicator(close=df["price"])
-        df["stoch_rsi"] = stoch_rsi_indicator.stochrsi()
-        df["stoch_rsi_pct"] = df["stoch_rsi"] * 100
+        df["stoch_rsi"] = ta.momentum.StochRSIIndicator(df["price"]).stochrsi()
     except:
         df["stoch_rsi"] = np.nan
-        df["stoch_rsi_pct"] = np.nan
     bb = ta.volatility.BollingerBands(df["price"])
     df["bb_upper"] = bb.bollinger_hband()
     df["bb_lower"] = bb.bollinger_lband()
@@ -95,6 +92,31 @@ if len(df) >= 50:
         if not latest.empty:
             ml_prediction = model.predict(latest)[0]
             ml_signal = "BUY" if ml_prediction == 1 else "SELL"
+
+    # Friendly explanation
+    rsi_val = latest["rsi"].values[0]
+    macd_val = latest["macd_diff"].values[0]
+    sma = latest["short_ma"].values[0]
+    lma = latest["long_ma"].values[0]
+
+    explanation = []
+    if rsi_val < 30:
+        explanation.append(f"🟢 RSI is low ({rsi_val:.1f}) → asset may be oversold")
+    elif rsi_val > 70:
+        explanation.append(f"🔴 RSI is high ({rsi_val:.1f}) → asset may be overbought")
+    else:
+        explanation.append(f"ℹ️ RSI is moderate ({rsi_val:.1f})")
+
+    if macd_val > 0:
+        explanation.append(f"🟢 MACD is positive ({macd_val:.4f}) → upward momentum")
+    else:
+        explanation.append(f"🔴 MACD is negative ({macd_val:.4f}) → downward pressure")
+
+    if sma > lma:
+        explanation.append(f"🟢 Short MA ({sma:.0f}) > Long MA ({lma:.0f}) → bullish crossover")
+    else:
+        explanation.append(f"🔴 Short MA ({sma:.0f}) < Long MA ({lma:.0f}) → bearish crossover")
+    
             st.write("📊 ML raw prediction:", ml_prediction)
             st.write("📊 ML final signal:", ml_signal)
         else:
@@ -108,6 +130,8 @@ else:
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
+for reason in explanation:
+    st.write(reason)
 
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
@@ -121,13 +145,8 @@ st.line_chart(df.set_index("time")[["macd_diff"]])
 st.subheader("🎯 Bollinger Bands")
 st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 
-if st.sidebar.checkbox("Show Stochastic RSI Chart", value=True):
-    st.subheader("🌀 Stochastic RSI (0 to 1)")
-    st.line_chart(df.set_index("time")[["stoch_rsi"]])
-    st.subheader("🌀 Stochastic RSI (%)")
-    st.line_chart(df.set_index("time")[["stoch_rsi_pct"]])
-    st.write("🔍 Last 10 Stoch RSI values:")
-    st.dataframe(df[["time", "stoch_rsi", "stoch_rsi_pct"]].tail(10))
+st.subheader("🌀 Stochastic RSI")
+st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
