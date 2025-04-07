@@ -1,8 +1,8 @@
 streamlit
 pandas
-numpy
+numpy==1.23.5
 pycoingecko
 streamlit_autorefresh
-pandas_ta
+pandas_ta==0.3.14
 scikit-learn
 setuptools>=65.5.0
