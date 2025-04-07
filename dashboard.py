@@ -44,10 +44,11 @@ def add_indicators(df):
     df["macd_diff"] = ta.trend.MACD(df["price"]).macd_diff()
     try:
         stoch_rsi_indicator = ta.momentum.StochRSIIndicator(close=df["price"])
-    df["stoch_rsi"] = stoch_rsi_indicator.stochrsi()
-    df["stoch_rsi_pct"] = df["stoch_rsi"] * 100
+        df["stoch_rsi"] = stoch_rsi_indicator.stochrsi()
+        df["stoch_rsi_pct"] = df["stoch_rsi"] * 100
     except:
         df["stoch_rsi"] = np.nan
+        df["stoch_rsi_pct"] = np.nan
     bb = ta.volatility.BollingerBands(df["price"])
     df["bb_upper"] = bb.bollinger_hband()
     df["bb_lower"] = bb.bollinger_lband()
