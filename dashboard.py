@@ -129,7 +129,7 @@ st.subheader("📈 RSI")
 if df["rsi"].notna().sum() > 0:
     st.line_chart(df.set_index("time")[["rsi"]])
 else:
-    st.warning("⚠️ RSI not available for this time range.")
+    st.warning("RSI not available.")
 
 st.subheader("📉 MACD")
 if df["macd_diff"].notna().sum() > 0:
