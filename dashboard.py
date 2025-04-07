@@ -36,14 +36,41 @@ def fetch_data(coin_id, days):
 # Add Technical Indicators
 def add_indicators(df):
     df = df.copy()
+    # MA
     df["short_ma"] = df["price"].rolling(window=short_ma).mean()
     df["long_ma"] = df["price"].rolling(window=long_ma).mean()
+    
+    # RSI
     df["rsi"] = ta.momentum.RSIIndicator(df["price"]).rsi()
+    
+    # MACD
     macd = ta.trend.MACD(df["price"])
     df["macd_diff"] = macd.macd_diff()
+    
+    # Bollinger Bands
     bb = ta.volatility.BollingerBands(df["price"])
     df["bb_upper"] = bb.bollinger_hband()
     df["bb_lower"] = bb.bollinger_lband()
+    
+    # Stochastic RSI
+    stoch = ta.momentum.StochRSIIndicator(df["price"])
+    df["stoch_rsi"] = stoch.stochrsi()
+    
+    # Exponential Moving Average
+    df["ema_20"] = ta.trend.EMAIndicator(df["price"], window=20).ema_indicator()
+    
+    # ADX (trend strength)
+    df["adx"] = ta.trend.ADXIndicator(high=df["price"], low=df["price"], close=df["price"]).adx()
+    
+    # CCI (Commodity Channel Index)
+    df["cci"] = ta.trend.CCIIndicator(high=df["price"], low=df["price"], close=df["price"]).cci()
+    
+    # Momentum
+    df["momentum"] = ta.momentum.MomentumIndicator(df["price"]).momentum()
+    
+    # Williams %R
+    df["williams_r"] = ta.momentum.WilliamsRIndicator(high=df["price"], low=df["price"], close=df["price"]).williams_r()
+    
     return df
 
 # Generate basic signal
