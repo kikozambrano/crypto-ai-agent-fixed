@@ -155,16 +155,4 @@ if df["ema_20"].notna().sum() > 0:
 else:
     st.warning("⚠️ EMA not available for this time range.")
 
-def test_coingecko_api():
-    cg = CoinGeckoAPI()
-    try:
-        data = cg.ping()  # This endpoint checks the API status
-        if data.get("gecko_says") == "(V3) To the Moon!":
-            st.success("CoinGecko API is working correctly!")
-        else:
-            st.warning("CoinGecko API is reachable, but response is unexpected.")
-    except Exception as e:
-        st.error(f"Failed to fetch data from CoinGecko API: {e}")
 
-# Call the test function
-test_coingecko_api()
