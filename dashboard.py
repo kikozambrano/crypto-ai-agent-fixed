@@ -124,7 +124,6 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
 
-
 # === Backtesting ===
 if st.sidebar.checkbox("Run Backtest"):
     st.subheader("📈 Backtest Results")
