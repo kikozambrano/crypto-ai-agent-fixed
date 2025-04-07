@@ -65,7 +65,15 @@ st.title(f"📈 Signal for {coin_name}")
 st.subheader(f"📌 Current Signal: `{signal}`")
 
 # Charts
+st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
+
+st.subheader("📈 RSI (Relative Strength Index)")
 st.line_chart(df.set_index("time")[["rsi"]])
+
+st.subheader("📉 MACD (Moving Average Convergence Divergence)")
 st.line_chart(df.set_index("time")[["macd_diff"]])
+
+st.subheader("🎯 Bollinger Bands")
 st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
+
