@@ -65,10 +65,6 @@ def add_target_label(df, lookahead=1):
     df = df.copy()
     df["target"] = df["price"].shift(-lookahead)
     return df.dropna()
-    df = df.copy()
-    df["future_price"] = df["price"].shift(-lookahead)
-    df["target"] = np.where(df["future_price"] > df["price"], 1, 0)
-    return df.dropna()
 
 def train_model(df):
     features = ["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]
@@ -86,6 +82,9 @@ df = add_indicators(df)
 signal = generate_signal(df)
 
 ml_signal = "N/A"
+predicted_price = np.nan
+expected_return = np.nan
+
 if len(df) >= 50:
     try:
         df = add_target_label(df)
@@ -93,19 +92,19 @@ if len(df) >= 50:
         latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
         latest = latest.dropna()
         if not latest.empty:
-            ml_prediction = model.predict(latest)[0]
             predicted_price = model.predict(latest)[0]
-latest_price = df["price"].iloc[-1]
-price_diff = predicted_price - latest_price
-expected_return = (price_diff / latest_price) * 100
+            latest_price = df["price"].iloc[-1]
+            price_diff = predicted_price - latest_price
+            expected_return = (price_diff / latest_price) * 100
 
-if price_diff > 0:
-    ml_signal = "BUY"
-elif price_diff < 0:
-    ml_signal = "SELL"
-else:
-    ml_signal = "HOLD"
-            st.write("📊 ML raw prediction:", ml_prediction)
+            if price_diff > 0:
+                ml_signal = "BUY"
+            elif price_diff < 0:
+                ml_signal = "SELL"
+            else:
+                ml_signal = "HOLD"
+
+            st.write("📊 ML raw prediction:", f"${predicted_price:,.2f}")
             st.write("📊 ML final signal:", ml_signal)
         else:
             st.warning("ML input row has NaN values. Cannot predict.")
@@ -114,27 +113,44 @@ else:
 else:
     st.warning("Not enough data to train ML model. Use a longer lookback period.")
 
-# === Streamlit UI ===
+# === Streamlit UI with chart checks ===
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
-st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
-st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
+if not np.isnan(predicted_price):
+    st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
+if not np.isnan(expected_return):
+    st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
 
 st.subheader("📈 RSI")
-st.line_chart(df.set_index("time")[["rsi"]])
+if df["rsi"].notna().sum() > 0:
+    st.line_chart(df.set_index("time")[["rsi"]])
+else:
+    st.warning("⚠️ RSI not available for this time range.")
 
 st.subheader("📉 MACD")
-st.line_chart(df.set_index("time")[["macd_diff"]])
+if df["macd_diff"].notna().sum() > 0:
+    st.line_chart(df.set_index("time")[["macd_diff"]])
+else:
+    st.warning("⚠️ MACD not available for this time range.")
 
 st.subheader("🎯 Bollinger Bands")
-st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
+if df[["bb_upper", "bb_lower"]].notna().sum().sum() > 0:
+    st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
+else:
+    st.warning("⚠️ Bollinger Bands not available for this time range.")
 
 st.subheader("🌀 Stochastic RSI")
-st.line_chart(df.set_index("time")[["stoch_rsi"]])
+if df["stoch_rsi"].notna().sum() > 0:
+    st.line_chart(df.set_index("time")[["stoch_rsi"]])
+else:
+    st.warning("⚠️ Stochastic RSI not available for this time range.")
 
 st.subheader("⚡ EMA (20)")
-st.line_chart(df.set_index("time")[["price", "ema_20"]])
+if df["ema_20"].notna().sum() > 0:
+    st.line_chart(df.set_index("time")[["price", "ema_20"]])
+else:
+    st.warning("⚠️ EMA not available for this time range.")
