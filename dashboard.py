@@ -8,8 +8,12 @@ from binance.enums import KLINE_INTERVAL_1MINUTE, KLINE_INTERVAL_1HOUR, KLINE_IN
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
-client = Client()
-
+try:
+    client = Client()
+except Exception as e:
+    st.error("⚠️ Binance client failed to initialize. Falling back to safe mode.")
+    st.stop()
+    
 # === Settings ===
 st.sidebar.title("🔧 Settings")
 symbols = {
