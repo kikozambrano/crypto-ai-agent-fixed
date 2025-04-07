@@ -4,7 +4,7 @@ from pycoingecko import CoinGeckoAPI
 import pandas as pd
 import numpy as np
 import ta
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
 # === Settings ===
@@ -44,7 +44,8 @@ def add_indicators(df):
     df["macd_diff"] = ta.trend.MACD(df["price"]).macd_diff()
     try:
         df["stoch_rsi"] = ta.momentum.StochRSIIndicator(df["price"]).stochrsi()
-    except:
+    except Exception as e:
+        st.warning(f"Stochastic RSI calculation failed: {e}")
         df["stoch_rsi"] = np.nan
     bb = ta.volatility.BollingerBands(df["price"])
     df["bb_upper"] = bb.bollinger_hband()
@@ -123,7 +124,6 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
-
 
 # === Backtesting ===
 if st.sidebar.checkbox("Run Backtest"):
