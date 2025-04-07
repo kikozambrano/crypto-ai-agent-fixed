@@ -1,6 +1,6 @@
 streamlit
 pandas
 numpy
-pycoingecko
+python-binance
 streamlit_autorefresh
 ta
