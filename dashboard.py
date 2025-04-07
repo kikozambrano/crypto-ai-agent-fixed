@@ -1,14 +1,3 @@
-
-Yes, there are a few syntax errors in the code. Specifically, the indentation is inconsistent in several places, which will lead to errors when running the program. Here are the corrections:
-
-1. Lines 105, 107, and 109 should be aligned correctly under the `if` statement.
-2. Lines 111, 113, and 115 should be aligned correctly under the `if` statement.
-3. Lines 117 and 119 should be aligned correctly under the `if` statement.
-4. The `st.write` and `st.warning` calls inside the `try` block should be properly indented.
-
-Here is the corrected code:
-
-```python
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 from pycoingecko import CoinGeckoAPI
@@ -161,6 +150,3 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
-```
-
-This should resolve the indentation issues and allow the code to run correctly.
