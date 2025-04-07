@@ -85,43 +85,41 @@ def fetch_data(symbol, interval, limit):
      return model
  
  # === Main App ===
- df = fetch_data(coin_id, days)
- df = add_indicators(df)
- signal = generate_signal(df)
- 
- ml_signal = "N/A"
- predicted_price = np.nan
- expected_return = np.nan
- 
- if len(df) >= 50:
-     try:
-         df = add_target_label(df)
-         model = train_model(df)
-         latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
-         latest = latest.dropna()
-         if not latest.empty:
-             ml_prediction = model.predict(latest)[0]
-             predicted_price = ml_prediction
-             latest_price = df["price"].iloc[-1]
-             price_diff = predicted_price - latest_price
-             expected_return = (price_diff / latest_price) * 100
- 
-             if price_diff > 0:
-                 ml_signal = "BUY"
-             elif price_diff < 0:
-                 ml_signal = "SELL"
-             else:
-                 ml_signal = "HOLD"
- 
-             st.write("📊 ML raw prediction:", ml_prediction)
-             st.write("📊 ML raw prediction:", f"${ml_prediction:,.2f}")
-             st.write("📊 ML final signal:", ml_signal)
-         else:
-             st.warning("ML input row has NaN values. Cannot predict.")
-     except Exception as e:
-         st.error(f"ML prediction failed: {e}")
- else:
-     st.warning("Not enough data to train ML model. Use a longer lookback period.")
+ df = fetch_data(symbol, binance_interval, limit)
+df = add_indicators(df)
+signal = generate_signal(df)
+
+ml_signal = "N/A"
+predicted_price = np.nan
+expected_return = np.nan
+
+if len(df) >= 50:
+    try:
+        df = add_target_label(df)
+        model = train_model(df)
+        latest = df.dropna().iloc[-1:][["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
+        latest = latest.dropna()
+        if not latest.empty:
+            predicted_price = model.predict(latest)[0]
+            latest_price = df["price"].iloc[-1]
+            price_diff = predicted_price - latest_price
+            expected_return = (price_diff / latest_price) * 100
+
+            if price_diff > 0:
+                ml_signal = "BUY"
+            elif price_diff < 0:
+                ml_signal = "SELL"
+            else:
+                ml_signal = "HOLD"
+
+            st.write("📊 ML raw prediction:", f"${predicted_price:,.2f}")
+            st.write("📊 ML final signal:", ml_signal)
+        else:
+            st.warning("ML input row has NaN values. Cannot predict.")
+    except Exception as e:
+        st.error(f"ML prediction failed: {e}")
+else:
+    st.warning("Not enough data to train ML model. Increase candle limit.")
  
  # === Streamlit UI ===
  st.title(f"📈 ML + Technical Signal for {coin_name}")
