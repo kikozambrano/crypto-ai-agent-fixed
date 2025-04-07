@@ -105,7 +105,7 @@ if len(df) >= 50:
             else:
                 ml_signal = "HOLD"
 
-            st.write("📊 ML raw prediction:", ml_prediction)
+            st.write("📊 ML raw prediction:", f"${ml_prediction:,.2f}")
             st.write("📊 ML final signal:", ml_signal)
         else:
             st.warning("ML input row has NaN values. Cannot predict.")
