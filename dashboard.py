@@ -4,7 +4,7 @@ from pycoingecko import CoinGeckoAPI
 import pandas as pd
 import numpy as np
 import ta
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 # === Settings ===
@@ -63,7 +63,8 @@ def generate_signal(df):
 # === ML Labeling ===
 def add_target_label(df, lookahead=1):
     df = df.copy()
-    df["target"] = df["price"].shift(-1)
+    df["future_price"] = df["price"].shift(-lookahead)
+    df["target"] = np.where(df["future_price"] > df["price"], 1, 0)
     return df.dropna()
 
 def train_model(df):
@@ -72,7 +73,7 @@ def train_model(df):
     X = df[features]
     y = df["target"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     return model
 
@@ -82,9 +83,6 @@ df = add_indicators(df)
 signal = generate_signal(df)
 
 ml_signal = "N/A"
-predicted_price = np.nan
-expected_return = np.nan
-
 if len(df) >= 50:
     try:
         df = add_target_label(df)
@@ -93,19 +91,8 @@ if len(df) >= 50:
         latest = latest.dropna()
         if not latest.empty:
             ml_prediction = model.predict(latest)[0]
-            predicted_price = ml_prediction
-            latest_price = df["price"].iloc[-1]
-            price_diff = predicted_price - latest_price
-            expected_return = (price_diff / latest_price) * 100
-
-            if price_diff > 0:
-                ml_signal = "BUY"
-            elif price_diff < 0:
-                ml_signal = "SELL"
-            else:
-                ml_signal = "HOLD"
-
-            st.write("📊 ML raw prediction:", f"${ml_prediction:,.2f}")
+            ml_signal = "BUY" if ml_prediction == 1 else "SELL"
+            st.write("📊 ML raw prediction:", ml_prediction)
             st.write("📊 ML final signal:", ml_signal)
         else:
             st.warning("ML input row has NaN values. Cannot predict.")
@@ -118,10 +105,6 @@ else:
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
-if not np.isnan(predicted_price):
-    st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
-if not np.isnan(expected_return):
-    st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
@@ -140,3 +123,60 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
+
+
+# === Backtesting ===
+if st.sidebar.checkbox("Run Backtest"):
+    st.subheader("📈 Backtest Results")
+    
+    backtest_df = df.dropna().copy()
+    backtest_df = add_target_label(backtest_df)
+    backtest_df = backtest_df.dropna(subset=["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi", "target"])
+
+    X = backtest_df[["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]
+    y = backtest_df["target"]
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+
+    # Simulate trades
+    initial_cash = 10000
+    cash = initial_cash
+    position = 0
+    portfolio_values = []
+    trade_log = []
+
+    for i in range(len(backtest_df) - 1):
+        row = backtest_df.iloc[i]
+        next_price = backtest_df.iloc[i + 1]["price"]
+        input_row = pd.DataFrame([row[["rsi", "macd_diff", "short_ma", "long_ma", "ema_20", "stoch_rsi"]]])
+        pred = model.predict(input_row)[0]
+
+        if pred > row["price"] and position == 0:
+            # BUY
+            position = cash / row["price"]
+            cash = 0
+            trade_log.append({"date": row["time"], "action": "BUY", "price": row["price"]})
+        elif pred < row["price"] and position > 0:
+            # SELL
+            cash = position * row["price"]
+            position = 0
+            trade_log.append({"date": row["time"], "action": "SELL", "price": row["price"]})
+
+        portfolio_value = cash + position * row["price"]
+        portfolio_values.append(portfolio_value)
+
+    final_value = cash + position * backtest_df.iloc[-1]["price"]
+    total_return = ((final_value - initial_cash) / initial_cash) * 100
+
+    st.metric("💰 Final Portfolio Value", f"${final_value:,.2f}")
+    st.metric("📈 Total Return", f"{total_return:.2f}%")
+
+    chart_df = backtest_df.iloc[:len(portfolio_values)].copy()
+    chart_df["Portfolio Value"] = portfolio_values
+    st.line_chart(chart_df.set_index("time")[["price", "Portfolio Value"]])
+
+    st.subheader("📋 Trade Log")
+    if trade_log:
+        st.dataframe(pd.DataFrame(trade_log))
+    else:
+        st.write("No trades executed.")
