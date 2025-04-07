@@ -36,7 +36,8 @@ def fetch_data(coin_id, days):
 # Add Technical Indicators
 def add_indicators(df):
     df = df.copy()
-    # MA
+
+    # Moving Averages
     df["short_ma"] = df["price"].rolling(window=short_ma).mean()
     df["long_ma"] = df["price"].rolling(window=long_ma).mean()
     
@@ -53,25 +54,17 @@ def add_indicators(df):
     df["bb_lower"] = bb.bollinger_lband()
     
     # Stochastic RSI
-    stoch = ta.momentum.StochRSIIndicator(df["price"])
-    df["stoch_rsi"] = stoch.stochrsi()
+    try:
+        stoch = ta.momentum.StochRSIIndicator(df["price"])
+        df["stoch_rsi"] = stoch.stochrsi()
+    except Exception:
+        df["stoch_rsi"] = np.nan
     
-    # Exponential Moving Average
+    # EMA
     df["ema_20"] = ta.trend.EMAIndicator(df["price"], window=20).ema_indicator()
-    
-    # ADX (trend strength)
-    df["adx"] = ta.trend.ADXIndicator(high=df["price"], low=df["price"], close=df["price"]).adx()
-    
-    # CCI (Commodity Channel Index)
-    df["cci"] = ta.trend.CCIIndicator(high=df["price"], low=df["price"], close=df["price"]).cci()
-    
-    # Momentum
-    df["momentum"] = ta.momentum.MomentumIndicator(df["price"]).momentum()
-    
-    # Williams %R
-    df["williams_r"] = ta.momentum.WilliamsRIndicator(high=df["price"], low=df["price"], close=df["price"]).williams_r()
-    
+
     return df
+
 
 # Generate basic signal
 def generate_signal(df):
@@ -95,12 +88,17 @@ st.subheader(f"📌 Current Signal: `{signal}`")
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
 
-st.subheader("📈 RSI (Relative Strength Index)")
+st.subheader("📈 RSI")
 st.line_chart(df.set_index("time")[["rsi"]])
 
-st.subheader("📉 MACD (Moving Average Convergence Divergence)")
+st.subheader("📉 MACD")
 st.line_chart(df.set_index("time")[["macd_diff"]])
 
 st.subheader("🎯 Bollinger Bands")
 st.line_chart(df.set_index("time")[["bb_upper", "price", "bb_lower"]])
 
+st.subheader("🌀 Stochastic RSI")
+st.line_chart(df.set_index("time")[["stoch_rsi"]])
+
+st.subheader("⚡ EMA (20-period)")
+st.line_chart(df.set_index("time")[["price", "ema_20"]])
