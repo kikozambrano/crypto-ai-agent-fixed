@@ -4,7 +4,7 @@ from pycoingecko import CoinGeckoAPI
 import pandas as pd
 import numpy as np
 import ta
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
 # === Settings ===
@@ -63,6 +63,9 @@ def generate_signal(df):
 # === ML Labeling ===
 def add_target_label(df, lookahead=1):
     df = df.copy()
+    df["target"] = df["price"].shift(-lookahead)
+    return df.dropna()
+    df = df.copy()
     df["future_price"] = df["price"].shift(-lookahead)
     df["target"] = np.where(df["future_price"] > df["price"], 1, 0)
     return df.dropna()
@@ -73,7 +76,7 @@ def train_model(df):
     X = df[features]
     y = df["target"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     return model
 
@@ -91,32 +94,17 @@ if len(df) >= 50:
         latest = latest.dropna()
         if not latest.empty:
             ml_prediction = model.predict(latest)[0]
-            ml_signal = "BUY" if ml_prediction == 1 else "SELL"
-            
-            # Friendly explanation
-            rsi_val = latest["rsi"].values[0]
-            macd_val = latest["macd_diff"].values[0]
-            sma = latest["short_ma"].values[0]
-            lma = latest["long_ma"].values[0]
+            predicted_price = model.predict(latest)[0]
+latest_price = df["price"].iloc[-1]
+price_diff = predicted_price - latest_price
+expected_return = (price_diff / latest_price) * 100
 
-            explanation = []
-            if rsi_val < 30:
-                explanation.append(f"🟢 RSI is low ({rsi_val:.1f}) → asset may be oversold")
-            elif rsi_val > 70:
-                explanation.append(f"🔴 RSI is high ({rsi_val:.1f}) → asset may be overbought")
-            else:
-                explanation.append(f"ℹ️ RSI is moderate ({rsi_val:.1f})")
-
-            if macd_val > 0:
-                explanation.append(f"🟢 MACD is positive ({macd_val:.4f}) → upward momentum")
-            else:
-                explanation.append(f"🔴 MACD is negative ({macd_val:.4f}) → downward pressure")
-
-            if sma > lma:
-                explanation.append(f"🟢 Short MA ({sma:.0f}) > Long MA ({lma:.0f}) → bullish crossover")
-            else:
-                explanation.append(f"🔴 Short MA ({sma:.0f}) < Long MA ({lma:.0f}) → bearish crossover")
-            
+if price_diff > 0:
+    ml_signal = "BUY"
+elif price_diff < 0:
+    ml_signal = "SELL"
+else:
+    ml_signal = "HOLD"
             st.write("📊 ML raw prediction:", ml_prediction)
             st.write("📊 ML final signal:", ml_signal)
         else:
@@ -130,8 +118,8 @@ else:
 st.title(f"📈 ML + Technical Signal for {coin_name}")
 st.subheader(f"📌 MA Signal: `{signal}`")
 st.subheader(f"🤖 ML Prediction: `{ml_signal}`")
-for reason in explanation:
-    st.write(reason)
+st.subheader(f"🎯 ML Target Price: ${predicted_price:,.2f}")
+st.subheader(f"📈 Expected Return: {expected_return:.2f}%")
 
 st.subheader("📊 Price + Moving Averages")
 st.line_chart(df.set_index("time")[["price", "short_ma", "long_ma"]])
