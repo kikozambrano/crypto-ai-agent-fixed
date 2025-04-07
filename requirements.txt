@@ -3,5 +3,10 @@ pandas
 numpy
 python-binance
 streamlit_autorefresh
+<<<<<<< HEAD
 scikit-learn
 ta
+=======
+ta
+scikit-learn
+>>>>>>> 618fe25 (Update: Stochastic RSI improvements and debug tools)
