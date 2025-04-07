@@ -4,4 +4,5 @@ numpy
 pycoingecko
 streamlit_autorefresh
 pandas_ta
-scikit-learn>=1.0
+scikit-learn
+setuptools>=65.5.0
