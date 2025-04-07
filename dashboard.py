@@ -1,4 +1,14 @@
 
+Yes, there are a few syntax errors in the code. Specifically, the indentation is inconsistent in several places, which will lead to errors when running the program. Here are the corrections:
+
+1. Lines 105, 107, and 109 should be aligned correctly under the `if` statement.
+2. Lines 111, 113, and 115 should be aligned correctly under the `if` statement.
+3. Lines 117 and 119 should be aligned correctly under the `if` statement.
+4. The `st.write` and `st.warning` calls inside the `try` block should be properly indented.
+
+Here is the corrected code:
+
+```python
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 from pycoingecko import CoinGeckoAPI
@@ -93,31 +103,31 @@ if len(df) >= 50:
         if not latest.empty:
             ml_prediction = model.predict(latest)[0]
             ml_signal = "BUY" if ml_prediction == 1 else "SELL"
+            
+            # Friendly explanation
+            rsi_val = latest["rsi"].values[0]
+            macd_val = latest["macd_diff"].values[0]
+            sma = latest["short_ma"].values[0]
+            lma = latest["long_ma"].values[0]
 
-    # Friendly explanation
-rsi_val = latest["rsi"].values[0]
-macd_val = latest["macd_diff"].values[0]
-sma = latest["short_ma"].values[0]
-lma = latest["long_ma"].values[0]
+            explanation = []
+            if rsi_val < 30:
+                explanation.append(f"🟢 RSI is low ({rsi_val:.1f}) → asset may be oversold")
+            elif rsi_val > 70:
+                explanation.append(f"🔴 RSI is high ({rsi_val:.1f}) → asset may be overbought")
+            else:
+                explanation.append(f"ℹ️ RSI is moderate ({rsi_val:.1f})")
 
-explanation = []
-if rsi_val < 30:
-        explanation.append(f"🟢 RSI is low ({rsi_val:.1f}) → asset may be oversold")
-    elif rsi_val > 70:
-        explanation.append(f"🔴 RSI is high ({rsi_val:.1f}) → asset may be overbought")
-    else:
-        explanation.append(f"ℹ️ RSI is moderate ({rsi_val:.1f})")
+            if macd_val > 0:
+                explanation.append(f"🟢 MACD is positive ({macd_val:.4f}) → upward momentum")
+            else:
+                explanation.append(f"🔴 MACD is negative ({macd_val:.4f}) → downward pressure")
 
-    if macd_val > 0:
-        explanation.append(f"🟢 MACD is positive ({macd_val:.4f}) → upward momentum")
-    else:
-        explanation.append(f"🔴 MACD is negative ({macd_val:.4f}) → downward pressure")
-
-    if sma > lma:
-        explanation.append(f"🟢 Short MA ({sma:.0f}) > Long MA ({lma:.0f}) → bullish crossover")
-    else:
-        explanation.append(f"🔴 Short MA ({sma:.0f}) < Long MA ({lma:.0f}) → bearish crossover")
-    
+            if sma > lma:
+                explanation.append(f"🟢 Short MA ({sma:.0f}) > Long MA ({lma:.0f}) → bullish crossover")
+            else:
+                explanation.append(f"🔴 Short MA ({sma:.0f}) < Long MA ({lma:.0f}) → bearish crossover")
+            
             st.write("📊 ML raw prediction:", ml_prediction)
             st.write("📊 ML final signal:", ml_signal)
         else:
@@ -151,3 +161,6 @@ st.line_chart(df.set_index("time")[["stoch_rsi"]])
 
 st.subheader("⚡ EMA (20)")
 st.line_chart(df.set_index("time")[["price", "ema_20"]])
+```
+
+This should resolve the indentation issues and allow the code to run correctly.
